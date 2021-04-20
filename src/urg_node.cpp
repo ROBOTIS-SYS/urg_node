@@ -574,6 +574,7 @@ bool UrgNode::connect()
 void UrgNode::scanThread()
 {
   while (!close_scan_) {
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 1");
     if (!urg_) {
       if (!connect()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -581,55 +582,69 @@ void UrgNode::scanThread()
       }
     }
 
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 2");
     if (calibrate_time_) {
       calibrate_time_offset();
     }
 
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 3");
     if (!urg_ || !rclcpp::ok()) {
       continue;
     }
 
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 4");
     // Before starting, update the status
     updateStatus();
 
     // Start the urgwidget
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 5");
     try {
       // If the connection failed, don't try and connect
       // pointer is invalid.
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 6");
       if (!urg_) {
         continue;  // Return to top of main loop, not connected.
       }
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 7");
       device_status_ = urg_->getSensorStatus();
       urg_->start();
       RCLCPP_INFO(this->get_logger(), "Streaming data.");
       // Clear the error count.
       error_count_ = 0;
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 8");
     } catch (const std::runtime_error & e) {
       RCLCPP_ERROR(this->get_logger(), "Error starting Hokuyo: %s", e.what());
       urg_.reset();
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 9");
       rclcpp::sleep_for(std::chrono::seconds(1));
       continue;  // Return to top of main loop
     } catch (...) {
       RCLCPP_ERROR(this->get_logger(), "Unknown error starting Hokuyo");
       urg_.reset();
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 10");
       rclcpp::sleep_for(std::chrono::seconds(1));
       continue;  // Return to top of main loop
     }
 
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 11");
     while (!close_scan_) {
       // Don't allow external access during grabbing the scan.
       try {
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 12");
         std::unique_lock<std::mutex> lock(lidar_mutex_);
         if (publish_multiecho_) {
           sensor_msgs::msg::MultiEchoLaserScan msg;
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 13");
           if (urg_->grabScan(msg)) {
             echoes_pub_->publish(msg);
             echoes_freq_->tick();
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 14");
           } else {
             RCLCPP_WARN(this->get_logger(), "Could not grab multi echo scan.");
             device_status_ = urg_->getSensorStatus();
             error_count_++;
           }
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 15");
         } else {
           sensor_msgs::msg::LaserScan msg;
           if (urg_->grabScan(msg)) {
@@ -641,22 +656,26 @@ void UrgNode::scanThread()
             error_count_++;
           }
         }
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 16");
       } catch (...) {
         RCLCPP_WARN(this->get_logger(), "Unknown error grabbing Hokuyo scan.");
         error_count_++;
       }
 
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 17");
       if (service_yield_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         service_yield_ = false;
       }
 
       // Reestablish connection if things seem to have gone wrong.
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 18");
       if (error_count_ > error_limit_) {
         RCLCPP_ERROR(this->get_logger(), "Error count exceeded limit, reconnecting.");
         urg_.reset();
         rclcpp::sleep_for(std::chrono::seconds(2));
 
+    RCLCPP_DEBUG(this->get_logger(), "Debug Point 19");
         break;  // Return to top of main loop
       }
     }
