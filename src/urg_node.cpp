@@ -648,6 +648,11 @@ void UrgNode::scanThread()
         } else {
           sensor_msgs::msg::LaserScan msg;
           if (urg_->grabScan(msg)) {
+            sensor_msgs::msg::LaserScan inverse_msg;
+            inverse_msg.ranges.resize(msg.ranges.size());
+            for (int i = 0; i < inverse_msg.ranges.size(); i++) {
+              inverse_msg.ranges[i] = msg.ranges[inverse_msg.ranges.size() - (i+1)];
+            }
             laser_pub_->publish(msg);
             laser_freq_->tick();
           } else {
